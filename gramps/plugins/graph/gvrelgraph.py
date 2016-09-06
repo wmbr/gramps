@@ -277,7 +277,7 @@ class RelGraphReport(Report):
 
             self.doc.add_node(p_id, label, shape, color, style, fill, url)
 
-            # Output families where person is a parent
+            # Output families where person is a parent and another member is present in self.person_handles
             if self.show_families:
                 family_list = person.get_family_handle_list()
                 for fam_handle in family_list:
@@ -285,13 +285,17 @@ class RelGraphReport(Report):
                     if family is None:
                         continue
                     if fam_handle not in families_done:
-                        families_done[fam_handle] = 1
-                        self.__add_family(fam_handle)
+                        family_members = {family.father_handle, family.mother_handle}.union(child_ref.ref for child_ref in family.child_ref_list) - {None}
+                        if len(family_members.intersection(self.person_handles)) >= 2:
+                            families_done[fam_handle] = 1
+                            self.__add_family(fam_handle)
+                        else:
+                            families_done[fam_handle] = 0
                     # If subgraphs are not chosen then each parent is linked
                     # separately to the family. This gives Graphviz greater
                     # control over the layout of the whole graph but
                     # may leave spouses not positioned together.
-                    if not self.use_subgraphs:
+                    if not self.use_subgraphs and families_done[fam_handle] == 1:
                         self.doc.add_link(p_id, family.get_gramps_id(), "",
                                           self.arrowheadstyle,
                                           self.arrowtailstyle)
